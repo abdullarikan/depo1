@@ -1,0 +1,16 @@
+# Git dosyaları
+.git
+.gitignore
+
+# Docker'ın kendi dosyaları
+.dockerignore
+Dockerfile
+
+# Python geçici dosyaları
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VSCode ayar klasörü
+.vscode/

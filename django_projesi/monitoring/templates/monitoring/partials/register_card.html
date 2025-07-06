@@ -1,0 +1,25 @@
+<div class="card shadow-sm h-100">
+    <div class="card-header text-center fw-bold small p-1">
+        {{ register.name }}
+    </div>
+    <div class="card-body d-flex align-items-center justify-content-center p-2">
+
+        {# Gösterim tipi "Metin Eşleştirme" ise etiketi göster #}
+        {% if register.display_preference == 'enum' %}
+            <div class="h5 fw-bold text-center p-2" id="enum-{{ register.id }}">{{ register.display_label|default:"Tanımsız" }}</div>
+
+        {# Eğer widget tipi "Durum Işığı" ise AÇIK/KAPALI göster #}
+        {% elif widget_type == 'indicator' %}
+            <div id="indicator-{{ register.id }}" class="badge fs-4 p-3 w-100 {% if register.latest_value %}bg-success{% else %}bg-danger{% endif %}">{% if register.latest_value %}AÇIK{% else %}KAPALI{% endif %}</div>
+
+        {# Eğer widget tipi "Kadran" ise ve min/max değerleri varsa kadranı göster #}
+        {% elif widget_type == 'gauge' and register.min_value is not None and register.max_value is not None %}
+             <div class="w-100" id="gauge-{{ register.id }}" data-min="{{ register.min_value }}" data-max="{{ register.max_value }}" data-value="{{ register.latest_value|default:0 }}"></div>
+
+        {# Diğer tüm durumlar için sayısal değeri göster #}
+        {% else %}
+            <div class="display-5 fw-bold" id="digital-{{ register.id }}">{{ register.latest_value|floatformat:1|default:"--" }}</div>
+        {% endif %}
+
+    </div>
+</div>

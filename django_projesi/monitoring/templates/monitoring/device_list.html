@@ -1,0 +1,50 @@
+{% extends 'monitoring/base.html' %}
+
+{% block title %}Cihaz Listesi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Cihazlar</h1>
+    <a href="{% url 'monitoring:device_add' %}" class="btn btn-primary">Yeni Cihaz Ekle</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">Cihaz Adı</th>
+                    <th scope="col">Bağlantı Adresi</th>
+                    <th scope="col">Port</th>
+                    <th scope="col">Aktif mi?</th>
+                    <th scope="col">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for device in devices %}
+                <tr>
+                    <td>{{ device.name }}</td>
+                    <td>{{ device.connection_host }}</td>
+                    <td>{{ device.port }}</td>
+                    <td>
+                        {% if device.is_active %}
+                            <span class="badge bg-success">Aktif</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Pasif</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'monitoring:device_edit' pk=device.pk %}" class="btn btn-sm btn-warning">Düzenle</a>
+                        <a href="{% url 'monitoring:device_delete' pk=device.pk %}" class="btn btn-sm btn-danger">Sil</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">Henüz hiç cihaz eklenmemiş.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

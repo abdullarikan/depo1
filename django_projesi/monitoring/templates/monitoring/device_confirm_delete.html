@@ -1,0 +1,18 @@
+{% extends 'monitoring/base.html' %}
+
+{% block title %}Cihazı Sil{% endblock %}
+
+{% block content %}
+<div class="alert alert-danger">
+    <h1>Cihazı Silme Onayı</h1>
+    <hr>
+    <p><b>"{{ device.name }}"</b> adlı cihazı kalıcı olarak silmek istediğinizden emin misiniz?</p>
+    <p>Bu işlem geri alınamaz.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Evet, Sil</button>
+        <a href="{% url 'monitoring:device_list' %}" class="btn btn-secondary">İptal</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,270 @@
+{% extends 'monitoring/base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>{{ page_title }}</h1>
+        <button id="save-layout-btn" class="btn btn-success"><i class="bi bi-save"></i> Düzeni Kaydet</button>
+    </div>
+    <p class="text-muted">Bu kişiselleştirilebilir izleme ekranında, sistemin farklı bölümlerini anlık olarak takip edebilirsiniz.</p>
+    <hr>
+
+    <div class="grid-stack">
+    {% for widget in widgets %}
+        <div class="grid-stack-item" 
+             gs-x="{{ widget.grid_x }}" gs-y="{{ widget.grid_y }}" 
+             gs-w="{{ widget.grid_width }}" gs-h="{{ widget.grid_height }}"
+             gs-id="{{ widget.pk }}">
+            
+            <div class="grid-stack-item-content">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header fs-5">{{ widget.name }}</div>
+                    <div class="card-body d-flex align-items-center justify-content-center p-2">
+                        
+                        {% if widget.widget_type == 'line_chart' and widget.registers.first %}
+                            <div class="w-100 h-100">
+                            {% with register=widget.registers.first %}
+                                <h6 class="text-center text-muted mt-1">{{ register.name }}</h6>
+                                <canvas id="chart-{{ register.id }}"></canvas>
+                            {% endwith %}
+                            </div>
+                        {% elif widget.widget_type == 'event_log' %}
+                            <ul id="live-event-log-list" class="list-group list-group-flush w-100" style="height: 280px; overflow-y: auto;">
+                                <li class="list-group-item text-muted">Canlı olaylar bekleniyor...</li>
+                            </ul>
+                        {% else %}
+                            <div class="row w-100">
+                            {% for register in widget.registers.all %}
+                                <div class="col-md-6 mb-2" id="card-container-{{ register.id }}">
+                                    {% include 'monitoring/partials/register_card.html' with register=register widget_type=widget.widget_type %}
+                                </div>
+                            {% endfor %}
+                            </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12"><div class="alert alert-info">Bu sayfaya atanmış bir Pano Bileşeni bulunamadı. Lütfen Admin Panelinden ekleyin.</div></div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/chart.umd.min.js' %}"></script> {# Çizgi Grafikler için #}
+<script src="{% static 'js/apexcharts.min.js' %}"></script> {# Kadranlar (Gauge) için #}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chartObjects = {}; // Chart.js nesneleri için
+    const gaugeObjects = {}; // ApexCharts kadranları için
+    const eventLogList = document.getElementById('live-event-log-list');
+    let lastKnownStates = {}; // Olay akışı için
+
+    // ---------- YARDIMCI GÜNCELLEME FONKSİYONLARI ----------
+
+    function updateChart(registerId, timestamp, value) {
+        const chart = chartObjects[registerId];
+        if (chart) {
+            const timeLabel = new Date(timestamp).toLocaleTimeString('tr-TR');
+            chart.data.labels.push(timeLabel);
+            chart.data.datasets[0].data.push(parseFloat(value));
+            if (chart.data.labels.length > 30) { // Grafikte son 30 veriyi tut
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+            chart.update('none'); // Animasyonsuz güncelle
+        }
+    }
+    
+    function updateGauge(registerId, value) {
+        const gauge = gaugeObjects[registerId];
+        if (gauge) {
+            const val = parseFloat(value);
+            const percentage = ((val - gauge.min) / (gauge.max - gauge.min)) * 100;
+            gauge.instance.updateSeries([Math.min(100, Math.max(0, percentage))]);
+            gauge.instance.updateOptions({ plotOptions: { radialBar: { dataLabels: { value: { formatter: () => val.toFixed(1) } } } } });
+        }
+    }
+
+    function updateDigitalDisplay(registerId, value) {
+        const display = document.getElementById(`digital-${registerId}`);
+        if (display) { display.textContent = parseFloat(value).toFixed(1); }
+    }
+
+    function updateIndicator(registerId, value) {
+        const indicator = document.getElementById(`indicator-${registerId}`);
+        if (indicator) {
+            const isOn = (parseFloat(value) === 1.0);
+            indicator.textContent = isOn ? 'AÇIK' : 'KAPALI';
+            indicator.className = 'badge fs-4 p-3 w-100 ' + (isOn ? 'bg-success' : 'bg-danger');
+        }
+    }
+    
+    function updateEnumDisplay(registerId, label) {
+        const display = document.getElementById(`enum-${registerId}`);
+        if (display) { display.textContent = label || 'Tanımsız'; }
+    }
+
+    function addEventToLog(registerId, currentState, registerName) {
+        if (!eventLogList) return;
+        if (lastKnownStates[registerId] !== currentState) {
+            const logMessage = `<strong>${registerName}</strong> durumu <strong>${currentState}</strong> olarak değişti.`;
+            const initialItem = eventLogList.querySelector('.text-muted');
+            if (initialItem) initialItem.remove();
+            const newLogItem = document.createElement('li');
+            newLogItem.className = 'list-group-item list-group-item-action small py-1';
+            newLogItem.innerHTML = `<span class="text-muted">${new Date().toLocaleTimeString('tr-TR')}</span> - ${logMessage}`;
+            eventLogList.prepend(newLogItem);
+            while (eventLogList.children.length > 30) { eventLogList.removeChild(eventLogList.lastChild); }
+        }
+        lastKnownStates[registerId] = currentState;
+    }
+
+    // ---------- SAYFA YÜKLENİRKEN İLK KURULUM ----------
+
+    function initializeAllWidgets() {
+        // Chart.js Grafikleri
+        document.querySelectorAll('canvas[id^="chart-"]').forEach(canvas => {
+            const registerId = canvas.id.split('-')[1];
+            const ctx = canvas.getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'line', data: { labels: [], datasets: [{ label: 'Değer', data: [], tension: 0.2, fill: true }] },
+                options: { animation: false, scales: { x: { ticks: { maxRotation: 0, maxTicksLimit: 12 } } } }
+            });
+            chartObjects[registerId] = chart;
+        });
+
+        // ApexCharts Kadranları
+        document.querySelectorAll('[id^="gauge-"]').forEach(el => {
+            const registerId = el.id.split('-')[1];
+            const min = parseFloat(el.dataset.min), max = parseFloat(el.dataset.max);
+            const initialValue = parseFloat(el.dataset.value) || 0;
+            let p = (max > min) ? ((initialValue - min) / (max - min)) * 100 : 0;
+            const options = { series: [p], chart: { type: 'radialBar', height: 180, sparkline: { enabled: true } }, plotOptions: { radialBar: { dataLabels: { value: { formatter: () => parseFloat(initialValue).toFixed(1) } } } } };
+            const gauge = new ApexCharts(el, options);
+            gauge.render();
+            gaugeObjects[registerId] = { instance: gauge, min: min, max: max };
+        });
+
+        // Olay Akışı için ilk durumları kaydet
+        document.querySelectorAll('[id^="indicator-"], [id^="enum-"]').forEach(el => {
+            const registerId = el.id.split('-')[1];
+            lastKnownStates[registerId] = el.textContent.trim();
+        });
+    }
+
+    initializeAllWidgets();
+
+    // ---------- ANA CANLI VERİ DİNLEYİCİSİ ----------
+    document.addEventListener('new_live_data', function(e) {
+        if (e.detail.type !== 'send_live_data' || !e.detail.data) return;
+
+        const data = e.detail.data;
+        const registerId = data.register_id, value = data.value, label = data.label, timestamp = data.timestamp;
+
+        // Tüm görselleri güncelle
+        updateChart(registerId, timestamp, value);
+        updateGauge(registerId, value);
+        updateDigitalDisplay(registerId, value);
+        updateIndicator(registerId, value);
+        updateEnumDisplay(registerId, label);
+
+        // Olay Akışını Güncelle
+        const currentState = label || (document.getElementById(`indicator-${registerId}`) ? (parseFloat(value) === 1.0 ? 'AÇIK' : 'KAPALI') : null);
+        if (currentState) {
+            const card = document.querySelector(`#card-container-${registerId}`);
+            if (card) {
+                const registerName = card.querySelector('.card-header').textContent.trim();
+                addEventToLog(registerId, currentState, registerName);
+            }
+        }
+
+
+        // --- GridStack Başlatma ---
+        const grid = GridStack.init({
+            column: 12,
+            margin: 10,
+            cellHeight: 80,
+            alwaysShowResizeHandle: true,
+        });
+
+        // --- YENİ EKLENECEK SATIR ---
+        // GridStack'in işi bittiğinde, grid'i görünür hale getiren class'ı ekle.
+        grid.el.classList.add('grid-stack-loaded');
+        // --- BİTİŞ ---
+
+
+        // --- Buton ve Olay Dinleyicileri ---
+        const saveBtn = document.getElementById('save-layout-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                // Griddeki tüm widget'ların mevcut konum ve boyut bilgilerini al
+                const serializedData = grid.save();
+
+                // Düğmeyi geçici olarak devre dışı bırak ve bir "spinner" göster
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Kaydediliyor...';
+
+                fetch("{% url 'monitoring:save_widget_layout' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(serializedData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Bootstrap'in kendi "Toast" bildirimini kullanalım
+                        // Bu, alert'ten daha modern ve sorunsuzdur.
+                        showBootstrapToast('Başarılı!', 'Düzen başarıyla kaydedildi.', 'success');
+                    } else {
+                        showBootstrapToast('Hata!', data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Kaydetme hatası:', error);
+                    showBootstrapToast('Ağ Hatası!', 'Sunucuyla iletişim kurulamadı.', 'danger');
+                })
+                .finally(() => {
+                    // İşlem bittiğinde düğmeyi eski haline getir
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="bi bi-save"></i> Düzeni Kaydet';
+                });
+            });
+        }
+
+        // --- YENİ: Bootstrap Toast Bildirim Fonksiyonu ---
+        function showBootstrapToast(title, message, type) {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) return;
+
+            const toastHTML = `
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong>${title}</strong> ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            toastContainer.innerHTML = toastHTML;
+            const toastEl = toastContainer.querySelector('.toast');
+            const toast = new bootstrap.Toast(toastEl, { delay: 3000 }); // 3 saniye sonra kaybolur
+            toast.show();
+        }
+
+
+
+
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,245 @@
+/* Toggle Switch Ana Kutusu */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+/* Arka plandaki kaydırma çubuğu */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #6c757d; /* Kapalıyken Bootstrap'in standart gri rengi */
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+/* Kaydırılan yuvarlak topuz */
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+/* Gizli checkbox'ı tamamen sakla */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Checkbox işaretlendiğinde (AÇIK olduğunda) arka plan rengini değiştir */
+input:checked + .slider {
+    background-color: #198754; /* Açıkken Yeşil */
+}
+
+/* Checkbox işaretlendiğinde (AÇIK olduğunda) topuzu sağa kaydır */
+input:checked + .slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+}
+
+
+
+/* --- ZAMAN ÇİZELGESİ STİLLERİ --- */
+.timeline-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #444;
+    border-radius: .5rem;
+    background-color: #343a40;
+}
+
+.timeline-label {
+    min-width: 220px;
+    margin-right: 1rem;
+    font-weight: bold;
+    color: #fff;
+}
+
+.timeline-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr); /* 12 eşit sütun */
+    gap: 5px;
+    flex-grow: 1;
+}
+
+/* Her bir kutu+yazı ikilisini tutan sarmalayıcı */
+.slot-wrapper {
+    display: flex;
+    flex-direction: column; /* Elemanları dikeyde (alt alta) sırala */
+    align-items: center;    /* Elemanları ortala */
+}
+
+/* Sadece tıklanabilir renkli kutunun kendisi */
+.time-slot {
+    width: 100%; /* Kapsayıcısının genişliğini tam doldur */
+    height: 30px; /* Kutuların yüksekliğini biraz azalttık */
+    border: 1px solid #555;
+    background-color: #dc3545; /* Varsayılan: Kırmızı (Kapalı) */
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border-radius: 4px;
+}
+
+.time-slot:hover {
+    border-color: #fff;
+    transform: translateY(-2px); /* Üzerine gelince hafifçe yukarı kaysın */
+}
+
+.time-slot.active {
+    background-color: #198754; /* Aktif: Yeşil (Açık) */
+}
+
+/* Kutunun altındaki saat yazısı */
+.slot-label {
+    font-size: 11px;
+    color: #adb5bd; /* Daha soluk bir renk */
+    margin-top: 5px;
+}
+
+
+
+
+/* =================================
+   Tematik Widget Arka Planları
+==================================== */
+
+.widget-theme-rain-1 .card-body { background-image: url('../img/rain_bg_1.png'); }
+.widget-theme-rain-2 .card-body { background-image: url('../img/rain_bg_2.png'); } /* Gelecek için hazır */
+.widget-theme-rain-3 .card-body { background-image: url('../img/rain_bg_1.png'); } /* Gelecek için hazır */
+/* ...diğer temalar buraya eklenebilir... */
+.widget-theme-kritik .card-body { background-image: url('../img/kritik-bg.png'); }
+.widget-theme-yagmur .card-body { background-image: url('../img/yagmur-bg.png'); }
+.widget-theme-solar .card-body { background-image: url('../img/solar-bg.png'); }
+/* Mevcut kuralların altına bunları ekleyin */
+.widget-theme-nem .card-body { background-image: url('../img/nem-bg.png'); }
+.widget-theme-sis .card-body { background-image: url('../img/sis-bg.png'); }
+.widget-theme-sicaklik .card-body { background-image: url('../img/sicaklik-bg.png'); }
+
+/* Genel kural: Arka plan resmi olan tüm widget'lar için */
+[class*="widget-theme-rain-"] .card-body {
+    background-repeat: repeat;
+    background-size: auto;
+}
+
+/* Arka plan resmi olan kartlarda metnin daha okunaklı olması için */
+[class*="widget-theme-rain-"] .card-header {
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+[class*="widget-theme-rain-"] .card-body .card,
+[class*="widget-theme-rain-"] .card-body .badge {
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+[class*="widget-theme-rain-"] .card-body .text-muted {
+    color: #d0d0d0 !important;
+}
+
+
+
+
+/* =================================
+   İnteraktif Tablo Başlıkları
+==================================== */
+
+/* Normalde başlıkların renginin standart metin rengiyle aynı kalmasını sağlar */
+th .sort.btn-link {
+    color: var(--bs-body-color);
+    text-decoration: none;
+}
+
+/* Fare üzerine gelindiğinde veya odaklanıldığında */
+th .sort.btn-link:hover,
+th .sort.btn-link:focus {
+    color: var(--bs-primary); /* Ana tema rengine dönsün (genellikle mavi) */
+    text-decoration: underline; /* Altını çizerek link olduğunu belli et */
+}
+
+
+/* =================================
+   İkon Seçici Stilleri
+==================================== */
+#icon-list-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+}
+.icon-picker-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.icon-picker-item:hover {
+    background-color: #f0f0f0;
+    border-color: #0d6efd;
+}
+.icon-picker-item i {
+    font-size: 2rem; /* 32px */
+    margin-bottom: 5px;
+}
+.icon-picker-item span {
+    font-size: 0.75rem;
+    word-break: break-all;
+}
+
+
+
+
+
+@keyframes blinking {
+    0% { opacity: 1; }
+    50% { opacity: 0.2; }
+    100% { opacity: 1; }
+}
+.blinking {
+    animation: blinking 1s infinite;
+}
+
+#alarm-banner {
+    display: none;
+    position: fixed;
+    top: 60px; /* Navbar'ın hemen altına */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1050;
+    width: 80%;
+    max-width: 900px;
+}
+
+
+
+
+/* GridStack'in başlangıçta görünmemesi ve sonra yavaşça belirmesi için */
+.grid-stack {
+    opacity: 0; /* Başlangıçta tamamen şeffaf yap */
+    transition: opacity 0.4s ease-in-out; /* Opaklık değişimine animasyon ekle */
+}
+
+.grid-stack.grid-stack-loaded {
+    opacity: 1; /* Yüklendiğinde görünür yap */
+}

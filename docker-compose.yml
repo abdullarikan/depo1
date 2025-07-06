@@ -1,0 +1,59 @@
+services:
+  web:
+    build: ./django_projesi
+    command: daphne -b 0.0.0.0 -p 8000 core.asgi:application
+    volumes:
+      - ./django_projesi:/app
+    ports:
+      - "8000:8000"  # Dışarıdan 8000 portu, içeride 8000 portuna yönlenecek
+    depends_on:
+      - db
+      - redis
+
+  # PostgreSQL Veritabanı Servisimiz
+  db:
+    image: postgres:16
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=modbus_db
+      - POSTGRES_USER=modbus_user
+      - POSTGRES_PASSWORD=153351
+
+  # Redis Servisimiz (Celery için Ajanda) - YENİ
+  redis:
+    image: redis:7-alpine
+
+  # Veritabanını kolayca görmek için Arayüz - YENİ
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=abdullarikan@gmail.com
+      - PGADMIN_DEFAULT_PASSWORD=pg153351
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+  # Celery Görev Çalıştırıcısı - YENİ
+  celery_worker:
+    build: ./django_projesi
+    command: celery -A core worker -l info
+    volumes:
+      - ./django_projesi:/app
+    depends_on:
+      - redis
+      - db
+
+  # Celery Zamanlayıcısı (Görevleri Tetikleyen) - YENİ
+  celery_beat:
+    build: ./django_projesi
+    command: celery -A core beat -l info
+    volumes:
+      - ./django_projesi:/app
+    depends_on:
+      - redis
+      - db
+
+volumes:
+  postgres_data:

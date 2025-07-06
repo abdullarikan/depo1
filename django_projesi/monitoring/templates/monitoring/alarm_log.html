@@ -1,0 +1,49 @@
+{% extends 'monitoring/base.html' %}
+{% load query_helpers %}
+
+{% block content %}
+    <h1>{{ page_title }}</h1>
+    <p class="text-muted">Sistemde oluşan tüm geçmiş ve aktif alarmları görüntüleyin.</p>
+    <hr>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Durum</th>
+                        <th>Alarm Adı</th>
+                        <th>Başlangıç Zamanı</th>
+                        <th>Bitiş Zamanı</th>
+                        <th>Onaylayan</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in page_obj %}
+                    <tr class="{% if log.status == 'ACTIVE_UNACK' %}table-danger{% elif log.status == 'CLEARED_UNACK' %}table-warning{% endif %}">
+                        <td><span class="badge {% if log.status == 'ACTIVE_UNACK' %}bg-danger{% elif log.status == 'ACTIVE_ACK' %}bg-success{% elif log.status == 'CLEARED_UNACK' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ log.get_status_display }}</span></td>
+                        <td>{{ log.alarm_rule.name }}</td>
+                        <td>{{ log.start_time|date:"d M Y, H:i:s" }}</td>
+                        <td>{{ log.end_time|date:"d M Y, H:i:s"|default:"-" }}</td>
+                        <td>{{ log.acknowledged_by.username|default:"-" }}</td>
+                        <td>
+                            {% if log.status == 'ACTIVE_UNACK' or log.status == 'CLEARED_UNACK' %}
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="log_id" value="{{ log.pk }}">
+                                <button type="submit" class="btn btn-success btn-sm">Onayla</button>
+                            </form>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center p-4 text-muted">Hiç alarm kaydı bulunamadı.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+    </div>
+{% endblock %}

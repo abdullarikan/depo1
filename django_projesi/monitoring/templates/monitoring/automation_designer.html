@@ -1,0 +1,197 @@
+{% extends 'monitoring/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>{{ page_title }}</h1>
+    <button class="btn btn-primary" id="add-timeline-btn">+ Zaman Çizelgesi Ekle</button>
+</div>
+<p class="text-muted">
+    Bu sayfada, "yazılabilir" olarak işaretlenmiş coil tipi register'larınız için 24 saatlik çalışma planları oluşturabilirsiniz.
+</p>
+<hr>
+
+<div id="timeline-container">
+    <div class="text-center p-5 text-muted" id="initial-message">
+        Başlamak için 'Zaman Çizelgesi Ekle' butonuna tıklayın.
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gerekli HTML elemanlarını seçiyoruz
+    const addTimelineBtn = document.getElementById('add-timeline-btn');
+    const timelineContainer = document.getElementById('timeline-container');
+    const initialMessage = document.getElementById('initial-message');
+
+    // Django'dan gelen kayıtlı zamanlamaları JavaScript nesnesine çeviriyoruz
+    const savedSchedules = JSON.parse('{{ saved_schedules_json|safe|escapejs }}');
+
+    // --- ANA FONKSİYONLAR ---
+
+    // SAYFA YÜKLENDİĞİNDE KAYITLI ZAMAN ÇİZELGELERİNİ OLUŞTUR
+    function loadInitialTimelines() {
+        const savedCoils = Object.values(savedSchedules);
+        if (savedCoils.length > 0) {
+            if (initialMessage) initialMessage.remove();
+            savedCoils.forEach(coilData => {
+                // Her bir kayıtlı plan için zaman çizelgesi satırını oluştur
+                addTimelineRow(coilData, coilData.schedule_state);
+            });
+        }
+    }
+
+    // Ekrana yeni bir zaman çizelgesi satırı ekleyen fonksiyon
+    function addTimelineRow(coil, initialStates = []) {
+        if (initialMessage) initialMessage.remove();
+
+        // Daha önce bu ID ile bir satır eklenmiş mi diye kontrol et
+        if (document.querySelector(`.timeline-row[data-register-id="${coil.id}"]`)) {
+            return; // Eğer eklenmişse, tekrar ekleme
+        }
+
+        const timelineRow = document.createElement('div');
+        timelineRow.className = 'timeline-row';
+        timelineRow.dataset.registerId = coil.id;
+
+        // 24 saatlik, 2'şer saatlik 12 kutucuğu oluştur
+        let gridHtml = '';
+        for (let i = 0; i < 12; i++) {
+            const hour = i * 2;
+            const time_label = String(hour).padStart(2, '0') + '-' + String(hour + 2).padStart(2, '0');
+            const isActive = initialStates[i] ? 'active' : ''; // Başlangıç durumunu ayarla
+            
+            // + ile metin birleştirme (garantili yöntem)
+            gridHtml +=
+                '<div class="slot-wrapper">' +
+                    '<div class="time-slot ' + isActive + '" data-hour-start="' + hour + '" title="' + time_label + '"></div>' +
+                    '<small class="slot-label">' + time_label + '</small>' +
+                '</div>';
+        }
+
+        timelineRow.innerHTML =
+            '<div class="timeline-label">' + coil.name + '</div>' +
+            '<div class="timeline-grid">' + gridHtml + '</div>' +
+            '<button class="btn btn-success ms-3" disabled>Kaydet</button>';
+        
+        timelineContainer.appendChild(timelineRow);
+    }
+
+    // Kullanıcının Coil seçmesi için geçici satırı oluşturan fonksiyon
+    function createSelectorRow(coils) {
+        if (document.getElementById('new-timeline-selector')) return;
+        if (initialMessage) initialMessage.style.display = 'none';
+
+        const selectorRow = document.createElement('div');
+        selectorRow.className = 'timeline-row bg-body-secondary p-3';
+        selectorRow.id = 'new-timeline-selector';
+
+        let optionsHtml = '<option value="">--- Bir Coil Seçin ---</option>';
+        coils.forEach(coil => {
+            optionsHtml += '<option value=\'' + JSON.stringify(coil) + '\'>' + coil.name + '</option>';
+        });
+
+        selectorRow.innerHTML =
+            '<div class="timeline-label text-dark">Yeni Zamanlama:</div>' +
+            '<div class="flex-grow-1"><select class="form-select">' + optionsHtml + '</select></div>' +
+            '<button class="btn btn-primary ms-3" id="confirm-add-btn">Ekle</button>' +
+            '<button class="btn btn-light ms-2" id="cancel-add-btn">İptal</button>';
+        
+        timelineContainer.appendChild(selectorRow);
+    }
+
+    // --- OLAY DİNLEYİCİLER (EVENT LISTENERS) ---
+
+    // ANA BUTON: "+ Zaman Çizelgesi Ekle"
+    addTimelineBtn.addEventListener('click', async () => {
+        try {
+            const response = await fetch('/api/available-coils/');
+            const availableCoils = await response.json();
+            if (availableCoils.length === 0) {
+                alert("Zaman çizelgesine eklenecek yeni bir 'yazılabilir Coil' bulunamadı.");
+                return;
+            }
+            createSelectorRow(availableCoils);
+        } catch (error) { console.error("Hata:", error); }
+    });
+
+    // Tüm tıklama olaylarını yöneten ana fonksiyon
+    timelineContainer.addEventListener('click', async function(e) {
+        const target = e.target;
+
+        // Bir zaman kutucuğuna tıklandıysa...
+        if (target.classList.contains('time-slot')) {
+            target.classList.toggle('active');
+            const parentRow = target.closest('.timeline-row');
+            if (parentRow) parentRow.querySelector('button.btn-success').disabled = false;
+        }
+
+        // Seçim satırındaki "İptal" butonuna tıklandıysa...
+        if (target.id === 'cancel-add-btn') {
+            target.closest('#new-timeline-selector').remove();
+            if (initialMessage && !document.querySelector('.timeline-row')) {
+                initialMessage.style.display = 'block';
+            }
+        }
+
+        // Seçim satırındaki "Ekle" butonuna tıklandıysa...
+        if (target.id === 'confirm-add-btn') {
+            const selectorRow = target.closest('#new-timeline-selector');
+            const selectElement = selectorRow.querySelector('select');
+            if (selectElement.value) {
+                const selectedCoil = JSON.parse(selectElement.value);
+                addTimelineRow(selectedCoil);
+                selectorRow.remove();
+            } else {
+                alert("Lütfen bir coil seçin.");
+            }
+        }
+
+        // KAYDET BUTONUNA tıklandıysa...
+        if (target.classList.contains('btn-success')) {
+            const saveButton = target;
+            const parentRow = saveButton.closest('.timeline-row');
+            const registerId = parentRow.dataset.registerId;
+            const timeSlots = parentRow.querySelectorAll('.time-slot');
+
+            let currentState = false;
+            const events = [];
+            timeSlots.forEach(slot => {
+                const slotState = slot.classList.contains('active');
+                const slotTime = parseInt(slot.dataset.hourStart);
+                if (slotState !== currentState) {
+                    events.push({ time: slotTime, action: slotState });
+                    currentState = slotState;
+                }
+            });
+            if (currentState === true) { events.push({ time: 24, action: false }); }
+
+            try {
+                const response = await fetch(`/api/update-schedule/${registerId}/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ events: events })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+                    saveButton.disabled = true;
+                } else { throw new Error(result.message); }
+            } catch (error) {
+                console.error("Kaydetme hatası:", error);
+                alert("Hata: " + error.message);
+            }
+        }
+    });
+
+    // Sayfa ilk yüklendiğinde bu ana fonksiyonu çağır
+    loadInitialTimelines();
+});
+</script>
+{% endblock %}

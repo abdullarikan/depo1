@@ -1,0 +1,274 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="tr" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Korucu Kontrol Paneli{% endblock %}</title>
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/bootstrap-icons.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/custom.css' %}" rel="stylesheet">
+    <link href="{% static 'css/gridstack.min.css' %}" rel="stylesheet" >
+    
+    <style>
+        /* Navbar (56px) + Statusbar (yaklaşık 64px) için üstten boşluk bırakıyoruz */
+        body { padding-top: 70px; } 
+        main { padding-bottom: 2rem; }
+    </style>
+</head>
+<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100">
+    </div>
+<body>
+    <div id="alarm-banner" class="alert alert-dismissible fade show" role="alert">
+        <strong id="alarm-banner-title"></strong> <span id="alarm-banner-text"></span>
+        <button type="button" class="btn-close" id="alarm-banner-close"></button>
+    </div>
+
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+        <symbol id="circle-half" viewBox="0 0 16 16">
+            <path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
+        </symbol>
+        <symbol id="moon-stars-fill" viewBox="0 0 16 16">
+            <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/>
+            <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162h1.234a.217.217 0 0 1 .158.371l-.998.727.387 1.162a.217.217 0 0 1-.316.242l-.998-.727-.998.727a.217.217 0 0 1-.316-.242l.387-1.162-.998-.727a.217.217 0 0 1 .158-.371h1.234l.387-1.162zM13.379 7.5a.217.217 0 0 1 .412 0l.387 1.162h1.234a.217.217 0 0 1 .158.371l-.998.727.387 1.162a.217.217 0 0 1-.316.242l-.998-.727-.998.727a.217.217 0 0 1-.316-.242l.387-1.162-.998-.727a.217.217 0 0 1 .158-.371h1.234l.387-1.162z"/>
+        </symbol>
+        <symbol id="sun-fill" viewBox="0 0 16 16">
+            <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707z"/>
+        </symbol>
+    </svg>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'monitoring:test_center' %}">KORUCU Kontrol ve İzleme</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                {% if user.is_authenticated %}
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-link" href="{% url 'monitoring:test_center' %}">Test Merkezi</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'monitoring:dashboard' %}">Ana Panel</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'monitoring:status_panel' %}">Durum Paneli</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'monitoring:mosaic_dashboard' %}">Mozaik Pano</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'monitoring:device_list' %}">Cihaz Yönetimi</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'monitoring:register_list' %}">Register Yönetimi</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'monitoring:historical_data' %}">Geçmiş Raporlar</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'monitoring:schedule_designer' %}">Otomasyon</a></li>
+                    </ul>
+                    <span class="navbar-text me-3">Merhaba, {{ user.username }}</span>
+
+
+                    <a class="nav-link text-danger" href="{% url 'monitoring:alarm_log' %}" id="alarm-bell-icon" style="display: none;" title="Alarm Kayıtları">
+                        <i class="bi bi-bell-fill fs-5"></i>
+                    </a>
+
+
+
+                    <div class="dropdown me-3">
+                        <button class="btn btn-secondary dropdown-toggle d-flex align-items-center" type="button" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <svg class="bi" width="1em" height="1em" fill="currentColor" id="theme-icon-active"><use xlink:href="#circle-half"/></svg>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" aria-labelledby="themeDropdown">
+                            <li><button class="dropdown-item d-flex align-items-center" type="button" data-bs-theme-value="light"><svg class="bi me-2" width="1em" height="1em" fill="currentColor"><use xlink:href="#sun-fill"/></svg>Açık</button></li>
+                            <li><button class="dropdown-item d-flex align-items-center" type="button" data-bs-theme-value="dark"><svg class="bi me-2" width="1em" height="1em" fill="currentColor"><use xlink:href="#moon-stars-fill"/></svg>Koyu</button></li>
+                            <li><button class="dropdown-item d-flex align-items-center active" type="button" data-bs-theme-value="auto"><svg class="bi me-2" width="1em" height="1em" fill="currentColor"><use xlink:href="#circle-half"/></svg>Otomatik</button></li>
+                        </ul>
+                    </div>
+                    <form class="d-flex" method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-danger" type="submit">Çıkış Yap</button>
+                    </form>
+                {% else %}
+                    <ul class="navbar-nav ms-auto"><li class="nav-item"><a href="{% url 'login' %}" class="btn btn-outline-success">Giriş Yap</a></li></ul>
+                {% endif %}
+            </div>
+        </div>
+    </nav> {% if statusbar_items %}
+    <div class="statusbar bg-body-tertiary shadow-sm py-2 border-bottom sticky-top" style="top: 56px;">
+        <div class="container-fluid d-flex justify-content-center">
+            <div class="d-flex flex-wrap gap-4">
+                {% for item in statusbar_items %}
+                <div class="statusbar-item d-flex align-items-center" id="statusbar-item-{{ item.id }}" data-type="{{ item.type }}">
+                    {% if item.icon %}
+                        <i class="{{ item.icon }} fs-4 me-2 text-primary"></i>
+                    {% endif %}
+                    <div>
+                        <div class="fw-bold">{{ item.name }}</div>
+                        <small class="text-muted" id="statusbar-value-{{ item.id }}">
+                            {% if item.type == 'coil' or item.type == 'discrete_input' %}
+                                {% if item.value %}AÇIK{% else %}KAPALI{% endif %}
+                            {% else %}
+                                {{ item.value|default:"--" }}
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <main class="container-fluid mt-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}
+        <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+        <script src="{% static 'js/list.min.js' %}"></script>
+        <script src="{% static 'js/chart.umd.min.js' %}"></script>
+        <script src="{% static 'js/apexcharts.min.js' %}"></script>
+        <script src="{% static 'js/gridstack-all.js' %}"></script>
+        
+        <script>
+        /*!
+         * Color mode toggler for Bootstrap's docs (https://getbootstrap.com/)
+         * Copyright 2011-2024 The Bootstrap Authors
+         * Licensed under the Creative Commons Attribution 3.0 Unported License.
+         */
+        (() => {
+            'use strict'
+            const getStoredTheme = () => localStorage.getItem('theme')
+            const setStoredTheme = theme => localStorage.setItem('theme', theme)
+            const getPreferredTheme = () => {
+                const storedTheme = getStoredTheme()
+                if (storedTheme) { return storedTheme }
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+            }
+            const setTheme = theme => {
+                if (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.setAttribute('data-bs-theme', 'dark')
+                } else {
+                    document.documentElement.setAttribute('data-bs-theme', theme)
+                }
+            }
+            setTheme(getPreferredTheme())
+            const showActiveTheme = (theme, focus = false) => {
+                const themeSwitcher = document.querySelector('#themeDropdown')
+                if (!themeSwitcher) { return }
+                const activeThemeIcon = document.querySelector('#theme-icon-active use')
+                const btnToActive = document.querySelector(`[data-bs-theme-value="${theme}"]`)
+                const svgOfActiveBtn = btnToActive.querySelector('svg use').getAttribute('xlink:href')
+                document.querySelectorAll('[data-bs-theme-value]').forEach(element => {
+                    element.classList.remove('active')
+                    element.setAttribute('aria-pressed', 'false')
+                })
+                btnToActive.classList.add('active')
+                btnToActive.setAttribute('aria-pressed', 'true')
+                activeThemeIcon.setAttribute('xlink:href', svgOfActiveBtn)
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                const storedTheme = getStoredTheme()
+                if (storedTheme !== 'light' && storedTheme !== 'dark') {
+                    setTheme(getPreferredTheme())
+                }
+            })
+            window.addEventListener('DOMContentLoaded', () => {
+                showActiveTheme(getPreferredTheme())
+                document.querySelectorAll('[data-bs-theme-value]')
+                    .forEach(toggle => {
+                        toggle.addEventListener('click', () => {
+                            const theme = toggle.getAttribute('data-bs-theme-value')
+                            setStoredTheme(theme)
+                            setTheme(theme)
+                            showActiveTheme(theme, true)
+                        })
+                    })
+            })
+        })()
+        </script>
+
+        <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- SADECE GLOBAL FONKSİYONLAR ---
+        function updateStatusbarItem(data) {
+            const valueElement = document.getElementById(`statusbar-value-${data.register_id}`);
+            if (!valueElement) return;
+            const itemElement = valueElement.closest('.statusbar-item');
+            const registerType = itemElement.dataset.type;
+            if (registerType === 'coil' || registerType === 'discrete_input') {
+                valueElement.textContent = (parseFloat(data.value) === 1.0) ? 'AÇIK' : 'KAPALI';
+            } else {
+                valueElement.textContent = parseFloat(data.value).toFixed(1);
+            }
+        }
+
+        function updateDeviceStatusInCards(deviceId, status) {
+            const statusBadges = document.querySelectorAll('.status-badge-device-' + deviceId);
+            statusBadges.forEach(badge => {
+                const isOnline = (status === 'online');
+                badge.textContent = isOnline ? 'Çevrimiçi' : 'Çevrimdışı';
+                badge.className = 'badge rounded-pill me-2 ' + (isOnline ? 'bg-success' : 'bg-danger');
+            });
+        }
+        
+        // --- ANA WEBSOCKET BAĞLANTISI ---
+        const socket = new WebSocket('ws://' + window.location.host + '/ws/live-data/');
+
+        socket.onmessage = function(e) {
+            const payload = JSON.parse(e.data);
+            
+            // Gelen veriyi, diğer scriptlerin dinlemesi için tüm sayfaya yayınla
+            document.dispatchEvent(new CustomEvent('new_live_data', { detail: payload }));
+        };
+
+        // --- GLOBAL OLAY DİNLEYİCİ ---
+        // Kendi yayınımızı dinle ve global elemanları güncelle
+        document.addEventListener('new_live_data', function(e) {
+            const payload = e.detail;
+            if (payload.type === 'send_live_data') {
+                updateStatusbarItem(payload.data);
+            } 
+            else if (payload.type === 'send_device_status') {
+                updateDeviceStatusInCards(payload.data.device_id, payload.data.status);
+            }
+            // ALARM GÜNCELLEME OLAYINI YAKALA
+            else if (payload.type === 'send_alarm_update') {
+                const alarmBell = document.getElementById('alarm-bell-icon');
+                const banner = document.getElementById('alarm-banner');
+                const bannerTitle = document.getElementById('alarm-banner-title');
+                const bannerText = document.getElementById('alarm-banner-text');
+
+                if (payload.data.status === 'ACTIVE_UNACK') {
+                    // Zil ikonunu göster ve yakıp söndür
+                    if (alarmBell) {
+                        alarmBell.style.display = 'inline-block';
+                        alarmBell.classList.add('blinking');
+                    }
+                    // Banner'ı göster ve içeriğini doldur
+                    if (banner) {
+                        bannerTitle.textContent = `${payload.data.severity.toUpperCase()} ALARM:`;
+                        bannerText.textContent = payload.data.rule_name;
+                        // Önem seviyesine göre rengi ayarla
+                        banner.className = `alert alert-dismissible fade show alert-${payload.data.severity === 'critical' ? 'danger' : 'warning'}`;
+                        banner.style.display = 'block';
+                    }
+                    new Notification('YENİ ALARM!', { body: payload.data.rule_name });
+                }
+            }
+            const alarmBannerCloseBtn = document.getElementById('alarm-banner-close');
+            if (alarmBannerCloseBtn) {
+                alarmBannerCloseBtn.addEventListener('click', function() {
+                    document.getElementById('alarm-banner').style.display = 'none';
+                });
+            }
+
+
+
+
+        });
+
+        // Zil ikonuna tıklandığında yanıp sönmeyi durdur
+        const alarmBell = document.getElementById('alarm-bell-icon');
+        if (alarmBell) {
+            alarmBell.addEventListener('click', function(e) {
+                //e.preventDefault();
+                this.classList.remove('blinking');
+                // TODO: Tıklandığında aktif alarmların listesini gösteren bir modal aç
+            });
+        }
+
+    });
+    </script>
+    {% endblock %}
+</body>
+</html>

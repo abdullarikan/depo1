@@ -1,0 +1,14 @@
+{% extends 'monitoring/base.html' %}
+{% block title %}Register'ı Sil{% endblock %}
+{% block content %}
+<div class="alert alert-danger">
+    <h1>Register'ı Silme Onayı</h1>
+    <hr>
+    <p><b>"{{ register.name }}"</b> adlı register'ı kalıcı olarak silmek istediğinizden emin misiniz?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Evet, Sil</button>
+        <a href="{% url 'monitoring:register_list' %}" class="btn btn-secondary">İptal</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends 'monitoring/base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+    <h1>{{ page_title }}</h1>
+    <hr>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-success">Test Seansını Oluştur</button>
+        <a href="{% url 'monitoring:test_center' %}" class="btn btn-secondary">İptal</a>
+    </form>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends 'monitoring/base.html' %}
+{% load static %}
+
+{% block title %}Ana Kontrol Paneli{% endblock %}
+
+{% block content %}
+<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="pills-charts-tab" data-bs-toggle="pill" data-bs-target="#pills-charts" type="button" role="tab" aria-controls="pills-charts" aria-selected="true">
+            Canlı Grafikler
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pills-controls-tab" data-bs-toggle="pill" data-bs-target="#pills-controls" type="button" role="tab" aria-controls="pills-controls" aria-selected="false">
+            Cihaz Kontrolü
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="pills-tabContent">
+    <div class="tab-pane fade show active" id="pills-charts" role="tabpanel" aria-labelledby="pills-charts-tab">
+        <div class="row">
+            {% for register in registers %}
+                <div class="col-lg-6 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>{{ register.name }} <small class="text-muted">({{ register.device.name }})</small></span>
+                            <div class="d-flex align-items-center">
+                                <span class="status-badge-device-{{ register.device.id }} badge rounded-pill me-2 {% if register.device.status == 'online' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ register.device.get_status_display }}
+                                </span>
+                                <span class="badge bg-primary rounded-pill fs-6 me-2" id="latestValue-{{ register.id }}">--</span>
+                                <a href="{% url 'monitoring:register_detail' pk=register.pk %}" class="btn btn-outline-secondary btn-sm">Detaylar</a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="liveChart-{{ register.id }}"></canvas>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12"><div class="alert alert-secondary">Gösterilecek grafik bulunamadı.</div></div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="pills-controls" role="tabpanel" aria-labelledby="pills-controls-tab">
+        <div class="row">
+            {% for coil in coils %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card shadow-sm">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title mb-0">{{ coil.name }}</h5>
+                                <small class="text-muted">{{ coil.device.name }}</small>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="coilSwitch-{{ coil.pk }}" onchange="window.sendCoilCommand({{ coil.pk }}, this.checked)" {% if coil.latest_value %}checked{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12"><div class="alert alert-secondary">Kontrol edilecek bir "Coil" bulunamadı.</div></div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script>
+    // Bu sayfadaki canlı güncellemeler için gerekli tüm JavaScript kodları
+    // Bu script bloğunun tamamı, bir önceki adımdaki gibi doğru ve günceldir.
+    document.addEventListener('DOMContentLoaded', function () {
+        const registersData = JSON.parse('{{ registers_json|safe|escapejs }}');
+        const chartObjects = {};
+
+        function updateChartCard(data) {
+            const chartToUpdate = chartObjects[data.register_id];
+            const latestValueSpan = document.getElementById(`latestValue-${data.register_id}`);
+            if (chartToUpdate) {
+                const chartData = chartToUpdate.data;
+                const timeLabel = new Date(data.timestamp).toLocaleTimeString('tr-TR');
+                chartData.labels.push(timeLabel);
+                chartData.datasets[0].data.push(data.value);
+                if (chartData.labels.length > 30) {
+                    chartData.labels.shift();
+                    chartData.datasets[0].data.shift();
+                }
+                chartToUpdate.update({ duration: 400 });
+            }
+            if (latestValueSpan) { latestValueSpan.textContent = parseFloat(data.value).toFixed(1); }
+        }
+
+        function updateSwitchVisual(data) {
+            const coilSwitch = document.getElementById(`coilSwitch-${data.register_id}`);
+            if (coilSwitch) { coilSwitch.checked = (parseFloat(data.value) === 1.0); }
+        }
+
+        registersData.forEach(register => {
+            const ctx = document.getElementById(`liveChart-${register.pk}`);
+            if (ctx) {
+                const newChart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [{ label: register.name, data: [] }] }, options: { scales: { y: { beginAtZero: false } } } });
+                chartObjects[register.pk] = newChart;
+            }
+        });
+
+        document.addEventListener('new_live_data', function (e) {
+            const payload = e.detail;
+            if (payload.type === 'send_live_data') {
+                updateChartCard(payload.data);
+                updateSwitchVisual(payload.data);
+            }
+        });
+
+        window.sendCoilCommand = function (registerId, value) {
+            fetch(`/api/write-coil/${registerId}/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: value })
+            }).then(res => res.json()).then(data => {
+                if (data.status !== 'success') alert('Hata: ' + data.message);
+            }).catch(err => console.error('API Hatası:', err));
+        }
+    });
+</script>
+{% endblock %}

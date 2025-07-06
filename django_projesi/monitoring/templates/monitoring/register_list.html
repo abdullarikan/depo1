@@ -1,0 +1,86 @@
+{% extends 'monitoring/base.html' %}
+{% block title %}Register Yönetimi{% endblock %}
+
+{% block content %}
+    <div id="registers-list">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Register Yönetimi</h1>
+            <div class="d-flex align-items-center" style="max-width: 50%;">
+                <input type="search" class="form-control search me-3" placeholder="Adı, cihazı veya adresine göre ara..." />
+                <a href="{% url 'monitoring:register_add' %}" class="btn btn-primary flex-shrink-0">
+                    <i class="bi bi-plus-lg"></i> Yeni Ekle
+                </a>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>
+                                <button class="sort btn btn-link text-decoration-none text-body fw-bold p-0" data-sort="name">
+                                    Register Adı <i class="bi bi-arrow-down-up small"></i>
+                                </button>
+                            </th>
+                            <th>
+                                <button class="sort btn btn-link text-decoration-none text-body fw-bold p-0" data-sort="device">
+                                    Ait Olduğu Cihaz <i class="bi bi-arrow-down-up small"></i>
+                                </button>
+                            </th>
+                            <th>
+                                <button class="sort btn btn-link text-decoration-none text-body fw-bold p-0" data-sort="address">
+                                    Adres <i class="bi bi-arrow-down-up small"></i>
+                                </button>
+                            </th>
+                            <th>
+                                <button class="sort btn btn-link text-decoration-none text-body fw-bold p-0" data-sort="type">
+                                    Tip <i class="bi bi-arrow-down-up small"></i>
+                                </button>
+                            </th>
+                            <th>Yazılabilir mi?</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody class="list">
+                        {% for register in object_list %} {# ListView 'object_list' adında bir context gönderir #}
+                        <tr>
+                            <td class="name">{{ register.name }}</td>
+                            <td class="device">{{ register.device.name }}</td>
+                            <td class="address">{{ register.address }}</td>
+                            <td class="type">{{ register.get_register_type_display }}</td>
+                            <td>{% if register.is_writable %}<span class="badge bg-success">Evet</span>{% else %}<span class="badge bg-secondary">Hayır</span>{% endif %}</td>
+                            <td>
+                                <a href="{% url 'monitoring:register_edit' pk=register.pk %}" class="btn btn-sm btn-warning">Düzenle</a>
+                                <a href="{% url 'monitoring:register_delete' pk=register.pk %}" class="btn btn-sm btn-danger">Sil</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center p-4 text-muted">Henüz hiç register oluşturulmamış.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script>
+    // List.js'i bu sayfada aktif etme kodu
+    document.addEventListener('DOMContentLoaded', function() {
+        var options = {
+            // Hangi class'a sahip elementler içinde arama ve sıralama yapılacağını belirtiyoruz
+            valueNames: [ 'name', 'address', 'device', 'type' ]
+        };
+
+        // List.js'i başlatıyoruz
+        // 'registers-list' -> ana container'ın ID'si
+        var registerList = new List('registers-list', options);
+    });
+    </script>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends 'monitoring/base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ page_title }}</h1>
+    <hr>
+    <form method="post">
+        {% csrf_token %}
+
+        {% for field in form %}
+            <div class="mb-3">
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+
+                {% if field.name == 'icon_name' %}
+                    <div class="input-group">
+                        <span class="input-group-text" id="icon-preview"><i class="bi bi-question-circle"></i></span>
+                        {{ field }} {# Bu, forms.py'da ayarladığımız readonly input'u çizer #}
+                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#iconPickerModal">İkon Seç</button>
+                    </div>
+                {% else %}
+                    {{ field }}
+                {% endif %}
+
+                {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                {% endif %}
+                {% for error in field.errors %}
+                    <div class="alert alert-danger p-1 mt-1">{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-success">Kaydet</button>
+        <a href="{{ request.META.HTTP_REFERER|default:'/' }}" class="btn btn-secondary">Geri</a>
+    </form>
+
+    <div class="modal fade" id="iconPickerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">İkon Seçin</h5>
+                    <input type="search" id="icon-search-input" class="form-control ms-3" placeholder="İkon ara...">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="icon-list-container">
+                    </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }} {# Eğer base.html'den gelen başka scriptler varsa onları korur #}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const iconPickerModal = document.getElementById('iconPickerModal');
+    const iconListContainer = document.getElementById('icon-list-container');
+    const iconSearchInput = document.getElementById('icon-search-input');
+    const mainIconInput = document.getElementById('id_icon_name'); // forms.py'dan gelen ana input
+    const iconPreview = document.getElementById('icon-preview').querySelector('i');
+
+    let allIcons = []; // Tüm ikonları burada saklayacağız
+
+    // İkonları pencereye çizen fonksiyon
+    function renderIcons(iconsToRender) {
+        iconListContainer.innerHTML = ''; // Önce mevcut listeyi temizle
+        iconsToRender.forEach(iconName => {
+            const item = document.createElement('div');
+            item.className = 'icon-picker-item text-center';
+            item.dataset.iconName = 'bi-' + iconName;
+            
+            item.innerHTML = `<i class="bi bi-${iconName}"></i><span>${iconName}</span>`;
+            
+            // İkona tıklandığında ne olacağı
+            item.addEventListener('click', function() {
+                const selectedIconName = this.dataset.iconName;
+                mainIconInput.value = selectedIconName; // Ana formdaki input'u güncelle
+                iconPreview.className = `bi ${selectedIconName}`; // Önizlemeyi güncelle
+                
+                // Modalı kapat
+                var modal = bootstrap.Modal.getInstance(iconPickerModal);
+                modal.hide();
+            });
+            iconListContainer.appendChild(item);
+        });
+    }
+
+    // Arama kutusunu dinle
+    iconSearchInput.addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        const filteredIcons = allIcons.filter(icon => icon.includes(searchTerm));
+        renderIcons(filteredIcons);
+    });
+
+    // Modal penceresi açıldığında ikonları yükle
+    iconPickerModal.addEventListener('show.bs.modal', async function () {
+        // İkonlar zaten yüklenmişse tekrar yükleme (performans için)
+        if (allIcons.length > 0) {
+            // Arama kutusunu temizle ve tüm ikonları tekrar göster
+            iconSearchInput.value = '';
+            renderIcons(allIcons);
+            return; 
+        }
+
+        iconListContainer.innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">Yükleniyor...</span></div>';
+        try {
+            // Projemize eklediğimiz JSON dosyasını okuyoruz
+            const response = await fetch("{% static 'data/bootstrap-icons.json' %}");
+            const iconsJson = await response.json();
+            allIcons = Object.keys(iconsJson); // Sadece ikon isimlerini al (örn: "alarm", "archive", "arrow-up")
+            renderIcons(allIcons);
+        } catch (error) {
+            iconListContainer.innerHTML = '<div class="alert alert-danger">İkonlar yüklenemedi.</div>';
+            console.error('İkon listesi yüklenirken hata:', error);
+        }
+    });
+
+    // Sayfa yüklendiğinde veya formda bir değer varsa, önizlemeyi güncelle
+    if (mainIconInput && mainIconInput.value) {
+        iconPreview.className = `bi ${mainIconInput.value}`;
+    }
+});
+</script>
+{% endblock %}

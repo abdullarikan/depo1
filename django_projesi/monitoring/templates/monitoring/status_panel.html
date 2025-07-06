@@ -1,0 +1,67 @@
+{% extends 'monitoring/base.html' %}
+{% load static %}
+
+{% block content %}
+    <h1>{{ page_title }}</h1>
+    <p class="text-muted">Sistemdeki aktif register'ların durumunu, önem ve bağlama göre organize edilmiş şekilde izleyin.</p>
+    <hr>
+
+    {% for widget in widgets %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header fs-5 bg-{{ widget.style|default:'light' }} {% if widget.style == 'primary' or widget.style == 'danger' %}text-white{% endif %}">
+            {{ widget.name }}
+        </div>
+        <div class="card-body widget-theme-{{ widget.background_theme }}">
+            <div class="row">
+                {% for register in widget.registers.all %}
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+                        {% include 'monitoring/partials/register_card.html' with register=register %}
+                    </div>
+                {% empty %}
+                    <p class="text-muted p-2">Bu panele atanmış bir register yok.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if general_registers %}
+    <h3 class="mt-4">Genel Durum Bilgileri</h3>
+    <hr>
+    <div class="row">
+        {% for register in general_registers %}
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-4">
+            {% include 'monitoring/partials/register_card.html' with register=register %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Bu script sadece sayısal değerleri ve durum ışıklarını günceller.
+    // Başka hiçbir karmaşık mantık içermez.
+    document.addEventListener('new_live_data', function(e) {
+        const payload = e.detail;
+        if (payload.type === 'send_live_data') {
+            const data = payload.data;
+            const digitalDisplay = document.getElementById(`digital-${data.register_id}`);
+            const indicatorDisplay = document.getElementById(`indicator-${data.register_id}`);
+
+            if(digitalDisplay) {
+                digitalDisplay.textContent = parseFloat(data.value).toFixed(1);
+            }
+            if(indicatorDisplay) {
+                const isOn = (parseFloat(data.value) === 1.0);
+                indicatorDisplay.textContent = isOn ? 'AÇIK' : 'KAPALI';
+                indicatorDisplay.className = 'badge fs-5 p-3 w-100 ' + (isOn ? 'bg-success' : 'bg-danger');
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

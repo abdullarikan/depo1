@@ -1,0 +1,10 @@
+django
+daphne
+djangorestframework
+psycopg2-binary
+celery
+redis
+channels
+channels-redis
+pymodbus
+WeasyPrint

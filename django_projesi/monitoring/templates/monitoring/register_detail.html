@@ -1,0 +1,129 @@
+{% extends 'monitoring/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1>{{ register.name }}</h1>
+        <h5 class="text-muted">{{ register.device.name }}</h5>
+    </div>
+    <a href="{% url 'monitoring:dashboard' %}" class="btn btn-outline-secondary">Ana Panele Dön</a>
+</div>
+<hr>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        Tüm Zamanların Veri Grafiği
+    </div>
+    <div class="card-body">
+        <div class="btn-group mb-3" role="group">
+            <button type="button" class="btn btn-sm btn-outline-primary" id="one_day">24 Saat</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="one_week">1 Hafta</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="one_month">1 Ay</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="all">Tümü</button>
+        </div>
+        <div id="historicalChart"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/apexcharts.min.js' %}"></script>
+<script>
+    // Django'dan gelen veriyi JavaScript değişkenine alıyoruz
+    const chartData = {{ chart_data_json|safe }};
+
+    // ApexCharts için yapılandırma seçenekleri
+    const options = {
+        series: [{
+            name: '{{ register.name }}',
+            data: chartData
+        }],
+        chart: {
+            type: 'area',
+            height: 450,
+            zoom: {
+                type: 'x',
+                enabled: true,
+                autoScaleYaxis: true
+            },
+            toolbar: {
+                autoSelected: 'zoom'
+            }
+        },
+        // --- YENİ EKLENEN BLOK ---
+        theme: {
+            mode: 'dark', 
+            palette: 'palette2' // Opsiyonel: Daha canlı renkler için bir palet
+        },
+    // --- YENİ BLOK BİTİŞİ ---
+        dataLabels: {
+            enabled: false
+        },
+        markers: {
+            size: 0,
+        },
+        title: {
+            text: 'Veri Değişimi',
+            align: 'left'
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                inverseColors: false,
+                opacityFrom: 0.5,
+                opacityTo: 0,
+                stops: [0, 90, 100]
+            },
+        },
+        yaxis: {
+            title: {
+                text: 'Değer'
+            },
+        },
+        xaxis: {
+            type: 'datetime',
+            labels: {
+                datetimeUTC: false, // Zamanı yerel saat diliminde göster
+                format: 'dd MMM HH:mm'
+            }
+        },
+        tooltip: {
+            x: {
+                format: 'dd MMMM yyyy, HH:mm:ss'
+            }
+        },
+    };
+
+    // Grafiği oluştur ve ekrana çiz
+    const chart = new ApexCharts(document.querySelector("#historicalChart"), options);
+    chart.render();
+
+    // Butonlara tıklama olaylarını ekle
+    document.getElementById('one_day').addEventListener('click', function() {
+        const now = new Date().getTime();
+        chart.zoomX(now - (24 * 60 * 60 * 1000), now);
+    });
+
+    document.getElementById('one_week').addEventListener('click', function() {
+        const now = new Date().getTime();
+        chart.zoomX(now - (7 * 24 * 60 * 60 * 1000), now);
+    });
+
+    document.getElementById('one_month').addEventListener('click', function() {
+        const now = new Date().getTime();
+        chart.zoomX(now - (30 * 24 * 60 * 60 * 1000), now);
+    });
+
+    document.getElementById('all').addEventListener('click', function() {
+        // Tüm zaman aralığını göstermek için min ve max değerlerini al
+        const min = new Date(chartData[0][0]).getTime();
+        const max = new Date(chartData[chartData.length - 1][0]).getTime();
+        chart.zoomX(min, max);
+    });
+</script>
+{% endblock %}

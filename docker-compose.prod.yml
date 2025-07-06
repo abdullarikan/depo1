@@ -1,0 +1,22 @@
+# Bu dosya, ana docker-compose.yml'deki ayarları ezer ve üretme özel ayarlar ekler.
+services:
+  web:
+    restart: always
+    volumes: [] # Geliştirmedeki kod senkronizasyonunu devre dışı bırak, kodu imajdan kullan.
+
+  celery_worker:
+    restart: always
+    volumes: [] # Geliştirmedeki kod senkronizasyonunu devre dışı bırak.
+
+  celery_beat:
+    restart: always
+    volumes: [] # Geliştirmedeki kod senkronizasyonunu devre dışı bırak.
+
+  db:
+    restart: always
+
+  redis:
+    restart: always
+
+  pgadmin:
+    restart: always
